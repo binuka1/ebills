@@ -133,6 +133,23 @@
 
   const STORAGE_KEY = 'yomeshBills';
 
+  function focusNextInput(event, nextElement) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      nextElement.focus();
+    }
+  }
+
+  billType.addEventListener('keydown', e => focusNextInput(e, accountNumber));
+  accountNumber.addEventListener('keydown', e => focusNextInput(e, referenceNumber));
+  referenceNumber.addEventListener('keydown', e => focusNextInput(e, baseAmount));
+  baseAmount.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitBtn.focus();
+    }
+  });
+
   billForm.addEventListener('submit', e => {
     e.preventDefault();
     messageDiv.textContent = '';
