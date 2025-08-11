@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>බිල්පත් ඉතිහාසය - Yomesh Stores</title>
+<style>
+  body {
+    font-family: Arial,sans-serif;
+    max-width: 600px;
+    margin: 20px auto;
+    background: #f0f8ff;
+    padding: 15px;
+  }
+  h2 {
+    text-align: center;
+    color: #004a99;
+  }
+  #searchInput {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border: 1.5px solid #aaa;
+    font-size: 1rem;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+  th, td {
+    border: 1px solid #004a99;
+    padding: 8px;
+    text-align: center;
+    word-break: break-word;
+  }
+  th {
+    background-color: #004a99;
+    color: white;
+  }
+  tr:nth-child(even) {
+    background-color: #dde6f7;
+  }
+  button.detailsBtn {
+    background-color: #007bff;
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  button.detailsBtn:hover {
+    background-color: #0056b3;
+  }
+  #backBtn {
+    margin-top: 15px;
+    background-color: #004a99;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  @media (max-width: 480px) {
+    body {
+      max-width: 100%;
+      padding: 10px;
+    }
+    th, td {
+      font-size: 0.8rem;
+      padding: 6px 4px;
+    }
+    button.detailsBtn, #backBtn {
+      font-size: 0.9rem;
+      padding: 8px 10px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<h2>බිල්පත් ඉතිහාසය</h2>
+
+<input type="text" id="searchInput" placeholder="සෙවීම: බිල් වර්ගය, ගිනුම් අංකය හෝ යොමු අංකය" />
+
+<button id="backBtn">ආපසු</button>
+
+<table id="billsTable">
+  <thead>
+    <tr>
+      <th>බිල් වර්ගය</th>
+      <th>ගිනුම් අංකය</th>
+      <th>යොමු අංකය</th>
+      <th>මුළු ගණන් (රු.)</th>
+      <th>දිනය</th>
+      <th>විස්තර බලන්න</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td colspan="6">බිල්පත් නොමැත.</td></tr>
+  </tbody>
+</table>
+
+<script>
+  const billsTableBody = document.querySelector('#billsTable tbody');
+  const backBtn = document.getElementById('backBtn');
+  const searchInput = document.getElementById('searchInput');
+
+  function formatDate(dateStr) {
+    const dt = new Date(dateStr);
+    return dt.toLocaleString('si-LK', { dateStyle: 'short', timeStyle: 'short' });
+  }
+
+  function renderBills(bills) {
+    billsTableBody.innerHTML = '';
+    if (bills.length === 0) {
+      billsTableBody.innerHTML = '<tr><td colspan="6">බිල්පත් නොමැත.</td></tr>';
+      return;
+    }
+    bills.forEach(bill => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${bill.billType || ''}</td>
+        <td>${bill.accountNumber || ''}</td>
+        <td>${bill.referenceNumber || ''}</td>
+        <td>${(bill.totalAmount || 0).toFixed(2)}</td>
+        <td>${bill.submittedAt ? formatDate(bill.submittedAt) : ''}</td>
+        <td><button class="detailsBtn">Details</button></td>
+      `;
+      tr.querySelector('.detailsBtn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.location.href = `bill.html?id=${bill.id}`;
+      });
+      billsTableBody.appendChild(tr);
+    });
+  }
+
+  function loadBills() {
+    let bills = JSON.parse(localStorage.getItem('bills') || '[]');
+    bills.sort((a, b) => b.id - a.id); // නවතම පළවෙනි
+    return bills;
+  }
+
+  function filterBills(searchTerm, bills) {
+    if (!searchTerm) return bills;
+    searchTerm = searchTerm.toLowerCase();
+    return bills.filter(bill => 
+      (bill.billType && bill.billType.toLowerCase().includes(searchTerm)) ||
+      (bill.accountNumber && bill.accountNumber.toString().includes(searchTerm)) ||
+      (bill.referenceNumber && bill.referenceNumber.toString().includes(searchTerm))
+    );
+  }
+
+  backBtn.addEventListener('click', () => {
+    window.location.href = 'index.html';
+  });
+
+  searchInput.addEventListener('input', () => {
+    const allBills = loadBills();
+    const filtered = filterBills(searchInput.value, allBills);
+    renderBills(filtered);
+  });
+
+  // Initial render
+  renderBills(loadBills());
+</script>
+
+</body>
+</html>

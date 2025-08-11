@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>බිල්පත ඇතුළත් කරන්න - Yomesh Stores</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 420px;
+    margin: 20px auto;
+    background: #f0f8ff;
+    padding: 15px;
+    box-sizing: border-box;
+  }
+  h1 {
+    text-align: center;
+    color: #004a99;
+    margin-bottom: 10px;
+  }
+  form {
+    background: white;
+    padding: 15px 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+  label {
+    display: block;
+    margin-top: 15px;
+    font-weight: bold;
+    color: #004a99;
+  }
+  select, input {
+    width: 100%;
+    padding: 8px 10px;
+    margin-top: 6px;
+    border-radius: 6px;
+    border: 1.5px solid #aaa;
+    font-size: 1rem;
+    box-sizing: border-box;
+  }
+  input[readonly] {
+    background: #e9ecef;
+  }
+  button, #exportBtn, #importBtn {
+    margin-top: 20px;
+    padding: 12px;
+    width: 100%;
+    font-size: 1.1rem;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  button:disabled, #exportBtn:disabled, #importBtn:disabled {
+    background: #80b3ff;
+    cursor: not-allowed;
+  }
+  #message {
+    margin-top: 20px;
+    font-weight: bold;
+    white-space: pre-line;
+    text-align: center;
+  }
+  /* Export/import section styling */
+  .export-import-section {
+    margin-top: 30px;
+    border-top: 1px solid #ccc;
+    padding-top: 15px;
+  }
+  .export-import-section h3 {
+    color: #004a99;
+    margin-bottom: 10px;
+  }
+  #importFile {
+    width: 100%;
+    margin-top: 10px;
+  }
+  #importBtn {
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Yomesh Stores - නව බිල්පතක් ඇතුළත් කරන්න</h1>
+
+<form id="billForm" novalidate>
+  <label for="billType">බිල් වර්ගය</label>
+  <select id="billType" required>
+    <option value="" disabled selected>-- තෝරන්න --</option>
+    <option value="LECO">LECO</option>
+    <option value="NWSDB">NWSDB</option>
+    <option value="DIALOG TV">DIALOG TV</option>
+  </select>
+
+  <label for="accountNumber">ගිනුම් අංකය</label>
+  <input type="number" id="accountNumber" min="0" required placeholder="ගිනුම් අංකය ඇතුළත් කරන්න" />
+
+  <label for="referenceNumber">යොමු අංකය</label>
+  <input type="number" id="referenceNumber" min="0" required placeholder="යොමු අංකය ඇතුළත් කරන්න" />
+
+  <label for="baseAmount">ගාණ (රු.)</label>
+  <input type="number" id="baseAmount" min="0" step="0.01" required placeholder="ගාණ ඇතුළත් කරන්න" />
+
+  <label for="serviceCharge">සේවා ගාස්තු (රු.)</label>
+  <input type="number" id="serviceCharge" min="0" step="0.01" value="0" required placeholder="සේවා ගාස්තු ඇතුළත් කරන්න" />
+
+  <label for="totalAmount">මුළු ගණන් (රු.)</label>
+  <input type="number" id="totalAmount" readonly />
+
+  <button type="submit" id="submitBtn">සම්පූර්ණ කරන්න</button>
+</form>
+
+<button id="historyBtn" type="button" style="margin-bottom:15px; width:100%; padding:12px; font-size:1.1rem; background:#28a745; color:#fff; border:none; border-radius:8px; cursor:pointer;">
+  බිල්පත් ඉතිහාසය බලන්න
+</button>
+
+<div id="message"></div>
+
+<!-- Export / Import Section -->
+<div class="export-import-section">
+  <h3>බිල්පත් Export / Import</h3>
+  <button id="exportBtn" type="button" title="Save bills backup to JSON file">Export Bills</button>
+  <input type="file" id="importFile" accept=".json" />
+  <button id="importBtn" type="button" title="Load bills from JSON file">Import Bills</button>
+  <p id="importExportMsg"></p>
+</div>
+
+<script>
+  const billForm = document.getElementById('billForm');
+  const billType = document.getElementById('billType');
+  const accountNumber = document.getElementById('accountNumber');
+  const referenceNumber = document.getElementById('referenceNumber');
+  const baseAmount = document.getElementById('baseAmount');
+  const serviceCharge = document.getElementById('serviceCharge');
+  const totalAmount = document.getElementById('totalAmount');
+  const submitBtn = document.getElementById('submitBtn');
+  const messageDiv = document.getElementById('message');
+
+  // Export / Import elements
+  const exportBtn = document.getElementById('exportBtn');
+  const importBtn = document.getElementById('importBtn');
+  const importFile = document.getElementById('importFile');
+  const importExportMsg = document.getElementById('importExportMsg');
+
+  // Update total amount automatically
+  function updateTotal() {
+    const base = parseFloat(baseAmount.value) || 0;
+    const service = parseFloat(serviceCharge.value) || 0;
+    totalAmount.value = (base + service).toFixed(2);
+  }
+  baseAmount.addEventListener('input', updateTotal);
+  serviceCharge.addEventListener('input', updateTotal);
+  updateTotal();
+
+  // Handle Enter key to move focus to next field
+  function focusNextInput(event, nextElement) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      nextElement.focus();
+    }
+  }
+  billType.addEventListener('keydown', e => focusNextInput(e, accountNumber));
+  accountNumber.addEventListener('keydown', e => focusNextInput(e, referenceNumber));
+  referenceNumber.addEventListener('keydown', e => focusNextInput(e, baseAmount));
+  baseAmount.addEventListener('keydown', e => focusNextInput(e, serviceCharge));
+  serviceCharge.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitBtn.focus();
+    }
+  });
+
+  billForm.addEventListener('submit', e => {
+    e.preventDefault();
+    messageDiv.textContent = '';
+    messageDiv.style.color = 'black';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'සම්පූර්ණ වෙමින්...';
+
+    if (!billType.value) {
+      alert('බිල් වර්ගය තෝරන්න!');
+      billType.focus();
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'සම්පූර්ණ කරන්න';
+      return;
+    }
+
+    const accNum = parseInt(accountNumber.value, 10);
+    const refNum = parseInt(referenceNumber.value, 10);
+    const base = parseFloat(baseAmount.value);
+    const service = parseFloat(serviceCharge.value);
+    const total = parseFloat(totalAmount.value);
+
+    if (
+      isNaN(accNum) ||
+      isNaN(refNum) ||
+      isNaN(base) ||
+      isNaN(service) ||
+      isNaN(total)
+    ) {
+      alert('සියලු ක්ෂේත්‍ර වල නිවැරදි අගයන් ඇතුළත් කරන්න!');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'සම්පූර්ණ කරන්න';
+      return;
+    }
+
+    // Save to localStorage
+    const bills = JSON.parse(localStorage.getItem('bills') || '[]');
+    const newBill = {
+      id: Date.now(),
+      billType: billType.value,
+      accountNumber: accNum,
+      referenceNumber: refNum,
+      baseAmount: base,
+      serviceCharge: service,
+      totalAmount: total,
+      submittedAt: new Date().toISOString(),
+    };
+    bills.push(newBill);
+    localStorage.setItem('bills', JSON.stringify(bills));
+
+    messageDiv.style.color = 'green';
+    messageDiv.textContent = 'බිල්පත සාර්ථකව සුරක්ෂිත කරන ලදි!';
+
+    billForm.reset();
+    updateTotal();
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'සම්පූර්ණ කරන්න';
+
+    // Redirect to bill.html with saved bill id
+    window.location.href = `bill.html?id=${newBill.id}`;
+  });
+
+  // Export bills to JSON file
+  exportBtn.addEventListener('click', () => {
+    const bills = localStorage.getItem('bills');
+    if (!bills) {
+      alert('සුරක්ෂිත කළ බිල්පත් නොමැත.');
+      return;
+    }
+    const blob = new Blob([bills], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bills_backup_${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    importExportMsg.style.color = 'green';
+    importExportMsg.textContent = 'Export සාර්ථකයි.';
+  });
+
+  // Import bills from JSON file
+  importBtn.addEventListener('click', () => {
+    importExportMsg.textContent = '';
+    const file = importFile.files[0];
+    if (!file) {
+      alert('Import කිරීම සඳහා JSON ගොනුවක් තෝරන්න.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const importedData = JSON.parse(e.target.result);
+        if (!Array.isArray(importedData)) {
+          throw new Error('ගොනුව අනුමාන කළ ආකෘතියට නොගැළපේ.');
+        }
+        const existingBills = JSON.parse(localStorage.getItem('bills') || '[]');
+
+        // Merge without duplicates (by id)
+        const mergedBills = [...existingBills];
+
+        importedData.forEach(newBill => {
+          if (!existingBills.find(b => b.id === newBill.id)) {
+            mergedBills.push(newBill);
+          }
+        });
+
+        localStorage.setItem('bills', JSON.stringify(mergedBills));
+        importExportMsg.style.color = 'green';
+        importExportMsg.textContent = `Import සාර්ථකයි! එක් කරන ලද අයිතම: ${importedData.length}`;
+        importFile.value = '';
+      } catch (err) {
+        alert('Import දෝෂයක්: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  });
+
+
+  const historyBtn = document.getElementById('historyBtn');
+historyBtn.addEventListener('click', () => {
+  // history.html කියලා වෙනම පිටුවක් හදලා තියෙනවා නම් එතනට යවන්න
+  window.location.href = 'billHistory.html'; 
+});
+
+</script>
+
+</body>
+</html>
