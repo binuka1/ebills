@@ -77,11 +77,11 @@
     padding-top: 8px;
     margin-top: 14px;
   }
-  #date {
+  #dateTime {
     text-align: center;
-    font-size: 1.2rem;
     font-weight: 700;
-    margin-top: 18px;
+    font-size: 1.3rem;
+    margin-top: 15px;
   }
   @media print {
     body {
@@ -108,23 +108,42 @@
   </div>
 </header>
 
-<h2>ගිණුම් බිල්පත</h2>
-
 <div id="billDetails"></div>
 
+<div id="dateTime"></div>
+
 <script>
+  function formatSriLankaDateTime(dateStr) {
+    const d = new Date(dateStr);
+
+    const year = d.getFullYear();
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
+
+    let hours = d.getHours();
+    const minutes = d.getMinutes();
+
+    const ampm = hours >= 12 ? 'ප.ව' : 'පෙ.ව';
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+    const minutesStr = minutes < 10 ? '0' + minutes : minutes;
+
+    return `${day}-${month}-${year}__${hours}.${minutesStr} ${ampm}`;
+  }
+
   function getQueryParam(param) {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get(param);
   }
 
   const billDetailsDiv = document.getElementById('billDetails');
+  const dateTimeDiv = document.getElementById('dateTime');
   const billId = getQueryParam('id');
 
   if (!billId) {
     billDetailsDiv.innerHTML = '<p style="color:red; text-align:center; font-size:1.2rem;">බිල්පත සොයාගත නොහැකියි. (id නොමැත)</p>';
   } else {
-    const bills = JSON.parse(localStorage.getItem('bills') || '[]');
+    const bills = JSON.parse(localStorage.getItem('yomeshBills') || '[]');
     const bill = bills.find(b => b.id == billId);
 
     if (!bill) {
@@ -136,10 +155,8 @@
         <div class="bill-row"><span class="label">යොමු අංකය:</span><span class="value">${bill.referenceNumber}</span></div>
         <div class="divider"></div>
         <div class="bill-row"><span class="label">ගාණ (රු.):</span><span class="value">${bill.baseAmount.toFixed(2)}</span></div>
-        <div class="bill-row"><span class="label">සේවා ගාස්තු (රු.):</span><span class="value">${bill.serviceCharge.toFixed(2)}</span></div>
-        <div class="bill-row total"><span>මුළු ගණන් (රු.):</span><span>${bill.totalAmount.toFixed(2)}</span></div>
-        <div id="date">${new Date(bill.submittedAt).toLocaleString('si-LK')}</div>
       `;
+      dateTimeDiv.textContent = formatSriLankaDateTime(bill.submittedAt);
     }
   }
 </script>

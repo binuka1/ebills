@@ -39,9 +39,6 @@
     font-size: 1rem;
     box-sizing: border-box;
   }
-  input[readonly] {
-    background: #e9ecef;
-  }
   button, #exportBtn, #importBtn {
     margin-top: 20px;
     padding: 12px;
@@ -63,7 +60,6 @@
     white-space: pre-line;
     text-align: center;
   }
-  /* Export/import section styling */
   .export-import-section {
     margin-top: 30px;
     border-top: 1px solid #ccc;
@@ -104,12 +100,6 @@
   <label for="baseAmount">ගාණ (රු.)</label>
   <input type="number" id="baseAmount" min="0" step="0.01" required placeholder="ගාණ ඇතුළත් කරන්න" />
 
-  <label for="serviceCharge">සේවා ගාස්තු (රු.)</label>
-  <input type="number" id="serviceCharge" min="0" step="0.01" value="0" required placeholder="සේවා ගාස්තු ඇතුළත් කරන්න" />
-
-  <label for="totalAmount">මුළු ගණන් (රු.)</label>
-  <input type="number" id="totalAmount" readonly />
-
   <button type="submit" id="submitBtn">සම්පූර්ණ කරන්න</button>
 </form>
 
@@ -119,7 +109,6 @@
 
 <div id="message"></div>
 
-<!-- Export / Import Section -->
 <div class="export-import-section">
   <h3>බිල්පත් Export / Import</h3>
   <button id="exportBtn" type="button" title="Save bills backup to JSON file">Export Bills</button>
@@ -134,44 +123,15 @@
   const accountNumber = document.getElementById('accountNumber');
   const referenceNumber = document.getElementById('referenceNumber');
   const baseAmount = document.getElementById('baseAmount');
-  const serviceCharge = document.getElementById('serviceCharge');
-  const totalAmount = document.getElementById('totalAmount');
   const submitBtn = document.getElementById('submitBtn');
   const messageDiv = document.getElementById('message');
 
-  // Export / Import elements
   const exportBtn = document.getElementById('exportBtn');
   const importBtn = document.getElementById('importBtn');
   const importFile = document.getElementById('importFile');
   const importExportMsg = document.getElementById('importExportMsg');
 
-  // Update total amount automatically
-  function updateTotal() {
-    const base = parseFloat(baseAmount.value) || 0;
-    const service = parseFloat(serviceCharge.value) || 0;
-    totalAmount.value = (base + service).toFixed(2);
-  }
-  baseAmount.addEventListener('input', updateTotal);
-  serviceCharge.addEventListener('input', updateTotal);
-  updateTotal();
-
-  // Handle Enter key to move focus to next field
-  function focusNextInput(event, nextElement) {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      nextElement.focus();
-    }
-  }
-  billType.addEventListener('keydown', e => focusNextInput(e, accountNumber));
-  accountNumber.addEventListener('keydown', e => focusNextInput(e, referenceNumber));
-  referenceNumber.addEventListener('keydown', e => focusNextInput(e, baseAmount));
-  baseAmount.addEventListener('keydown', e => focusNextInput(e, serviceCharge));
-  serviceCharge.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      submitBtn.focus();
-    }
-  });
+  const STORAGE_KEY = 'yomeshBills';
 
   billForm.addEventListener('submit', e => {
     e.preventDefault();
@@ -191,71 +151,70 @@
     const accNum = parseInt(accountNumber.value, 10);
     const refNum = parseInt(referenceNumber.value, 10);
     const base = parseFloat(baseAmount.value);
-    const service = parseFloat(serviceCharge.value);
-    const total = parseFloat(totalAmount.value);
 
-    if (
-      isNaN(accNum) ||
-      isNaN(refNum) ||
-      isNaN(base) ||
-      isNaN(service) ||
-      isNaN(total)
-    ) {
+    if (isNaN(accNum) || isNaN(refNum) || isNaN(base)) {
       alert('සියලු ක්ෂේත්‍ර වල නිවැරදි අගයන් ඇතුළත් කරන්න!');
       submitBtn.disabled = false;
       submitBtn.textContent = 'සම්පූර්ණ කරන්න';
       return;
     }
 
-    // Save to localStorage
-    const bills = JSON.parse(localStorage.getItem('bills') || '[]');
+    const bills = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     const newBill = {
       id: Date.now(),
       billType: billType.value,
       accountNumber: accNum,
       referenceNumber: refNum,
       baseAmount: base,
-      serviceCharge: service,
-      totalAmount: total,
       submittedAt: new Date().toISOString(),
     };
     bills.push(newBill);
-    localStorage.setItem('bills', JSON.stringify(bills));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(bills));
 
     messageDiv.style.color = 'green';
     messageDiv.textContent = 'බිල්පත සාර්ථකව සුරක්ෂිත කරන ලදි!';
 
     billForm.reset();
-    updateTotal();
-
     submitBtn.disabled = false;
     submitBtn.textContent = 'සම්පූර්ණ කරන්න';
-
-    // Redirect to bill.html with saved bill id
     window.location.href = `bill.html?id=${newBill.id}`;
   });
 
-  // Export bills to JSON file
-  exportBtn.addEventListener('click', () => {
-    const bills = localStorage.getItem('bills');
+  exportBtn.addEventListener('click', async () => {
+    const bills = localStorage.getItem(STORAGE_KEY);
     if (!bills) {
       alert('සුරක්ෂිත කළ බිල්පත් නොමැත.');
       return;
     }
     const blob = new Blob([bills], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `bills_backup_${new Date().toISOString().slice(0,10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    importExportMsg.style.color = 'green';
-    importExportMsg.textContent = 'Export සාර්ථකයි.';
+    const fileName = `bills_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    const file = new File([blob], fileName, { type: 'application/json' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: 'Yomesh Bills Backup',
+          text: 'Yomesh Stores බිල්පත් backup ගොනුව',
+        });
+        alert('ගොනුව share කරන ලදි!');
+      } catch (error) {
+        alert('Share කිරීම අසාර්ථක විය: ' + error.message);
+      }
+    } else {
+      alert('මෙම device එකට share කිරීම සහය දක්වන්නේ නැත.\nඔබට ගොනුව save කර share කරන්න පුළුවන්.');
+      // fallback: download file manually
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
   });
 
-  // Import bills from JSON file
   importBtn.addEventListener('click', () => {
     importExportMsg.textContent = '';
     const file = importFile.files[0];
@@ -271,9 +230,7 @@
         if (!Array.isArray(importedData)) {
           throw new Error('ගොනුව අනුමාන කළ ආකෘතියට නොගැළපේ.');
         }
-        const existingBills = JSON.parse(localStorage.getItem('bills') || '[]');
-
-        // Merge without duplicates (by id)
+        const existingBills = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
         const mergedBills = [...existingBills];
 
         importedData.forEach(newBill => {
@@ -282,7 +239,7 @@
           }
         });
 
-        localStorage.setItem('bills', JSON.stringify(mergedBills));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedBills));
         importExportMsg.style.color = 'green';
         importExportMsg.textContent = `Import සාර්ථකයි! එක් කරන ලද අයිතම: ${importedData.length}`;
         importFile.value = '';
@@ -293,13 +250,9 @@
     reader.readAsText(file);
   });
 
-
-  const historyBtn = document.getElementById('historyBtn');
-historyBtn.addEventListener('click', () => {
-  // history.html කියලා වෙනම පිටුවක් හදලා තියෙනවා නම් එතනට යවන්න
-  window.location.href = 'billHistory.html'; 
-});
-
+  document.getElementById('historyBtn').addEventListener('click', () => {
+    window.location.href = 'billHistory.html'; 
+  });
 </script>
 
 </body>

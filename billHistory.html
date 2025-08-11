@@ -82,7 +82,7 @@
 
 <h2>බිල්පත් ඉතිහාසය</h2>
 
-<input type="text" id="searchInput" placeholder="සෙවීම: බිල් වර්ගය, ගිනුම් අංකය හෝ යොමු අංකය" />
+<input type="text" id="searchInput" placeholder="සෙවීම: ගිණුම් අංකය හෝ යොමු අංකය" />
 
 <button id="backBtn">ආපසු</button>
 
@@ -92,7 +92,7 @@
       <th>බිල් වර්ගය</th>
       <th>ගිනුම් අංකය</th>
       <th>යොමු අංකය</th>
-      <th>මුළු ගණන් (රු.)</th>
+      <th>ගාණ (රු.)</th>
       <th>දිනය</th>
       <th>විස්තර බලන්න</th>
     </tr>
@@ -108,8 +108,19 @@
   const searchInput = document.getElementById('searchInput');
 
   function formatDate(dateStr) {
-    const dt = new Date(dateStr);
-    return dt.toLocaleString('si-LK', { dateStyle: 'short', timeStyle: 'short' });
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    const year = d.getFullYear();
+    const month = (d.getMonth()+1).toString().padStart(2,'0');
+    const day = d.getDate().toString().padStart(2,'0');
+
+    let hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2,'0');
+    const ampm = hours >= 12 ? 'ප.ව' : 'පෙ.ව';
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+
+    return `${day}-${month}-${year} ${hours}.${minutes} ${ampm}`;
   }
 
   function renderBills(bills) {
@@ -124,12 +135,11 @@
         <td>${bill.billType || ''}</td>
         <td>${bill.accountNumber || ''}</td>
         <td>${bill.referenceNumber || ''}</td>
-        <td>${(bill.totalAmount || 0).toFixed(2)}</td>
-        <td>${bill.submittedAt ? formatDate(bill.submittedAt) : ''}</td>
-        <td><button class="detailsBtn">Details</button></td>
+        <td>${bill.baseAmount !== undefined ? bill.baseAmount.toFixed(2) : '0.00'}</td>
+        <td>${formatDate(bill.submittedAt)}</td>
+        <td><button class="detailsBtn">විස්තර</button></td>
       `;
-      tr.querySelector('.detailsBtn').addEventListener('click', (e) => {
-        e.stopPropagation();
+      tr.querySelector('.detailsBtn').addEventListener('click', () => {
         window.location.href = `bill.html?id=${bill.id}`;
       });
       billsTableBody.appendChild(tr);
@@ -137,32 +147,30 @@
   }
 
   function loadBills() {
-    let bills = JSON.parse(localStorage.getItem('bills') || '[]');
-    bills.sort((a, b) => b.id - a.id); // නවතම පළවෙනි
+    let bills = JSON.parse(localStorage.getItem('yomeshBills') || '[]');
+    bills.sort((a,b) => b.id - a.id); // නවතම ඉදිරියට
     return bills;
   }
 
-  function filterBills(searchTerm, bills) {
-    if (!searchTerm) return bills;
-    searchTerm = searchTerm.toLowerCase();
+  function filterBills(term, bills) {
+    if (!term) return bills;
+    term = term.toLowerCase();
     return bills.filter(bill => 
-      (bill.billType && bill.billType.toLowerCase().includes(searchTerm)) ||
-      (bill.accountNumber && bill.accountNumber.toString().includes(searchTerm)) ||
-      (bill.referenceNumber && bill.referenceNumber.toString().includes(searchTerm))
+      (bill.accountNumber && bill.accountNumber.toString().includes(term)) ||
+      (bill.referenceNumber && bill.referenceNumber.toString().includes(term))
     );
   }
 
   backBtn.addEventListener('click', () => {
-    window.location.href = 'index.html';
+    window.location.href = 'billCreate.html';
   });
 
   searchInput.addEventListener('input', () => {
     const allBills = loadBills();
-    const filtered = filterBills(searchInput.value, allBills);
-    renderBills(filtered);
+    const filteredBills = filterBills(searchInput.value, allBills);
+    renderBills(filteredBills);
   });
 
-  // Initial render
   renderBills(loadBills());
 </script>
 
