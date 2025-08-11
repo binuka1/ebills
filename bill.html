@@ -112,6 +112,14 @@
 
 <div id="dateTime"></div>
 
+
+<p style="margin-top: 10px; font-size: 1.2rem; color: #3e3e3e; text-align: center; font-weight: 600;">
+  ස්තූති! නැවත පැමිණෙන්න
+</p>
+
+<p style="margin-top:20px; font-size:0.9rem; color:#555; text-align:center;"><b>NOTE :-</b>
+  මෙම බිල්පතේ වෙනසක් තියෙනවා නම් එය ලැබී පැය 24ක් ඇතුළත අපව දැනුවත් කරන්න.
+</p>
 <script>
   function formatSriLankaDateTime(dateStr) {
     const d = new Date(dateStr);
@@ -154,7 +162,7 @@
         <div class="bill-row"><span class="label">ගිනුම් අංකය:</span><span class="value">${bill.accountNumber}</span></div>
         <div class="bill-row"><span class="label">යොමු අංකය:</span><span class="value">${bill.referenceNumber}</span></div>
         <div class="divider"></div>
-        <div class="bill-row"><span class="label">ගාණ (රු.):</span><span class="value">${bill.baseAmount.toFixed(2)}</span></div>
+        <div class="bill-row"><span class="label">මුදල (රු.):</span><span class="value">${bill.baseAmount.toFixed(2)}</span></div>
       `;
       dateTimeDiv.textContent = formatSriLankaDateTime(bill.submittedAt);
     }
