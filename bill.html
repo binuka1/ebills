@@ -160,7 +160,7 @@
       billDetailsDiv.innerHTML = `
         <div class="bill-row"><span class="label">බිල් වර්ගය:</span><span class="value">${bill.billType}</span></div>
         <div class="bill-row"><span class="label">ගිනුම් අංකය:</span><span class="value">${bill.accountNumber}</span></div>
-        <div class="bill-row"><span class="label">යොමු අංකය:</span><span class="value">${bill.referenceNumber}</span></div>
+        <div class="bill-row"><span class="label">යොමු අංකය:</span><br><center><b><p>${bill.referenceNumber}</p><b></center></div>
         <div class="divider"></div>
         <div class="bill-row"><span class="label">මුදල (රු.):</span><span class="value">${bill.baseAmount.toFixed(2)}</span></div>
       `;
