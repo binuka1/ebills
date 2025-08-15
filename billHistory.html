@@ -7,33 +7,43 @@
 <style>
   body {
     font-family: Arial,sans-serif;
-    max-width: 600px;
-    margin: 20px auto;
+    margin: 0;
+    padding: 0;
     background: #f0f8ff;
+  }
+  .container {
+    max-width: 480px;
+    margin: auto;
     padding: 15px;
   }
   h2 {
     text-align: center;
     color: #004a99;
+    margin-bottom: 10px;
   }
   #searchInput {
     width: 100%;
     padding: 8px;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     border-radius: 6px;
     border: 1.5px solid #aaa;
     font-size: 1rem;
+    box-sizing: border-box;
+  }
+  .table-wrapper {
+    overflow-x: auto;
   }
   table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10px;
+    min-width: 600px;
   }
   th, td {
     border: 1px solid #004a99;
     padding: 8px;
     text-align: center;
     word-break: break-word;
+    font-size: 0.95rem;
   }
   th {
     background-color: #004a99;
@@ -49,94 +59,78 @@
     padding: 6px 12px;
     border-radius: 6px;
     cursor: pointer;
+    white-space: nowrap;
   }
   button.detailsBtn:hover {
     background-color: #0056b3;
   }
   #backBtn {
     margin-top: 15px;
+    width: 100%;
     background-color: #004a99;
     border: none;
     color: white;
-    padding: 10px 20px;
+    padding: 10px 0;
     border-radius: 8px;
     cursor: pointer;
+    font-size: 1rem;
   }
   @media (max-width: 480px) {
-    body {
-      max-width: 100%;
-      padding: 10px;
-    }
-    th, td {
-      font-size: 0.8rem;
-      padding: 6px 4px;
-    }
-    button.detailsBtn, #backBtn {
-      font-size: 0.9rem;
-      padding: 8px 10px;
-    }
+    #searchInput { font-size: 0.95rem; padding: 6px; }
+    th, td { font-size: 0.8rem; padding: 6px 4px; }
+    button.detailsBtn, #backBtn { font-size: 0.85rem; padding: 6px 8px; }
   }
 </style>
 </head>
 <body>
 
-<h2>බිල්පත් ඉතිහාසය</h2>
+<div class="container">
+  <h2>බිල්පත් ඉතිහාසය</h2>
 
-<input type="text" id="searchInput" placeholder="සෙවීම: ගිණුම් අංකය හෝ යොමු අංකය" />
+  <input type="text" id="searchInput" placeholder="සෙවීම: ගිණුම් අංකය හෝ යොමු අංකය" />
 
-<button id="backBtn">ආපසු</button>
+  <div class="table-wrapper">
+    <table id="billsTable">
+      <thead>
+        <tr>
+          <th>බිල් වර්ගය</th>
+          <th>ගිනුම් අංකය</th>
+          <th>යොමු අංකය</th>
+          <th>ගාණ (රු.)</th>
+          <th>දිනය</th>
+          <th>විස්තර බලන්න</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="6">බිල්පත් නොමැත.</td></tr>
+      </tbody>
+    </table>
+  </div>
 
-<table id="billsTable">
-  <thead>
-    <tr>
-      <th>බිල් වර්ගය</th>
-      <th>ගිනුම් අංකය</th>
-      <th>යොමු අංකය</th>
-      <th>ගාණ (රු.)</th>
-      <th>දිනය</th>
-      <th>විස්තර බලන්න</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr><td colspan="6">බිල්පත් නොමැත.</td></tr>
-  </tbody>
-</table>
+  <button id="backBtn">ආපසු</button>
+</div>
 
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
   const billsTableBody = document.querySelector('#billsTable tbody');
   const backBtn = document.getElementById('backBtn');
   const searchInput = document.getElementById('searchInput');
 
-  function formatDate(dateStr) {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    const year = d.getFullYear();
-    const month = (d.getMonth()+1).toString().padStart(2,'0');
-    const day = d.getDate().toString().padStart(2,'0');
-
-    let hours = d.getHours();
-    const minutes = d.getMinutes().toString().padStart(2,'0');
-    const ampm = hours >= 12 ? 'ප.ව' : 'පෙ.ව';
-    hours = hours % 12;
-    if (hours === 0) hours = 12;
-
-    return `${day}-${month}-${year} ${hours}.${minutes} ${ampm}`;
-  }
-
   function renderBills(bills) {
     billsTableBody.innerHTML = '';
-    if (bills.length === 0) {
+    if (!bills || bills.length === 0) {
       billsTableBody.innerHTML = '<tr><td colspan="6">බිල්පත් නොමැත.</td></tr>';
       return;
     }
     bills.forEach(bill => {
       const tr = document.createElement('tr');
+      const dateTimeStr = (bill.date && bill.time) ? `${bill.date} __ ${bill.time}` : '';
       tr.innerHTML = `
-        <td>${bill.billType || ''}</td>
-        <td>${bill.accountNumber || ''}</td>
-        <td>${bill.referenceNumber || ''}</td>
-        <td>${bill.baseAmount !== undefined ? bill.baseAmount.toFixed(2) : '0.00'}</td>
-        <td>${formatDate(bill.submittedAt)}</td>
+        <td>${bill.bill_type || ''}</td>
+        <td>${bill.account_number || ''}</td>
+        <td>${bill.reference_number || ''}</td>
+        <td>${bill.base_amount !== undefined ? Number(bill.base_amount).toFixed(2) : '0.00'}</td>
+        <td>${dateTimeStr}</td>
         <td><button class="detailsBtn">විස්තර</button></td>
       `;
       tr.querySelector('.detailsBtn').addEventListener('click', () => {
@@ -146,19 +140,18 @@
     });
   }
 
-  function loadBills() {
-    let bills = JSON.parse(localStorage.getItem('yomeshBills') || '[]');
-    bills.sort((a,b) => b.id - a.id); // නවතම ඉදිරියට
-    return bills;
-  }
-
-  function filterBills(term, bills) {
-    if (!term) return bills;
-    term = term.toLowerCase();
-    return bills.filter(bill => 
-      (bill.accountNumber && bill.accountNumber.toString().includes(term)) ||
-      (bill.referenceNumber && bill.referenceNumber.toString().includes(term))
-    );
+  function loadBillsFromDB() {
+    axios.get('http://91.99.57.32/api/database/rows/table/710/?user_field_names=true', {
+      headers: { Authorization: "Token u2FLiMgoADbHyxbKwAoJVvBSJjIKChWU" }
+    })
+    .then(res => {
+      const bills = res.data.results || [];
+      renderBills(bills);
+    })
+    .catch(err => {
+      console.error('Baserow DB error:', err);
+      billsTableBody.innerHTML = '<tr><td colspan="6">Baserow DB එකෙන් බිල්පත් ලබාගත නොහැක.</td></tr>';
+    });
   }
 
   backBtn.addEventListener('click', () => {
@@ -166,12 +159,18 @@
   });
 
   searchInput.addEventListener('input', () => {
-    const allBills = loadBills();
-    const filteredBills = filterBills(searchInput.value, allBills);
-    renderBills(filteredBills);
+    const term = searchInput.value.toLowerCase();
+    const rows = Array.from(billsTableBody.querySelectorAll('tr'));
+    rows.forEach(row => {
+      if (row.querySelector('td')) {
+        const account = row.children[1].textContent.toLowerCase();
+        const reference = row.children[2].textContent.toLowerCase();
+        row.style.display = (account.includes(term) || reference.includes(term)) ? '' : 'none';
+      }
+    });
   });
 
-  renderBills(loadBills());
+  loadBillsFromDB();
 </script>
 
 </body>

@@ -39,7 +39,7 @@
     font-size: 1rem;
     box-sizing: border-box;
   }
-  button, #exportBtn, #importBtn {
+  button {
     margin-top: 20px;
     padding: 12px;
     width: 100%;
@@ -50,30 +50,12 @@
     border-radius: 8px;
     cursor: pointer;
   }
-  button:disabled, #exportBtn:disabled, #importBtn:disabled {
+  button:disabled {
     background: #80b3ff;
     cursor: not-allowed;
   }
-  #message {
-    margin-top: 20px;
-    font-weight: bold;
-    white-space: pre-line;
-    text-align: center;
-  }
-  .export-import-section {
-    margin-top: 30px;
-    border-top: 1px solid #ccc;
-    padding-top: 15px;
-  }
-  .export-import-section h3 {
-    color: #004a99;
-    margin-bottom: 10px;
-  }
-  #importFile {
-    width: 100%;
-    margin-top: 10px;
-  }
-  #importBtn {
+  #historyBtn {
+    background: #28a745;
     margin-top: 10px;
   }
 </style>
@@ -92,24 +74,10 @@
   </select>
 
   <label for="accountNumber">ගිනුම් අංකය</label>
-  <input
-    type="text"
-    id="accountNumber"
-    inputmode="numeric"
-    pattern="[0-9]*"
-    required
-    placeholder="ගිනුම් අංකය ඇතුළත් කරන්න"
-  />
+  <input type="text" id="accountNumber" inputmode="numeric" pattern="[0-9]*" required placeholder="ගිනුම් අංකය ඇතුළත් කරන්න" />
 
   <label for="referenceNumber">යොමු අංකය</label>
-  <input
-    type="text"
-    id="referenceNumber"
-    inputmode="numeric"
-    pattern="[0-9]*"
-    required
-    placeholder="යොමු අංකය ඇතුළත් කරන්න"
-  />
+  <input type="text" id="referenceNumber" inputmode="numeric" pattern="[0-9]*" required placeholder="යොමු අංකය ඇතුළත් කරන්න" />
 
   <label for="baseAmount">ගාණ (රු.)</label>
   <input type="number" id="baseAmount" min="0" step="0.01" required placeholder="ගාණ ඇතුළත් කරන්න" />
@@ -117,177 +85,64 @@
   <button type="submit" id="submitBtn">සම්පූර්ණ කරන්න</button>
 </form>
 
-<button
-  id="historyBtn"
-  type="button"
-  style="margin-bottom:15px; width:100%; padding:12px; font-size:1.1rem; background:#28a745; color:#fff; border:none; border-radius:8px; cursor:pointer;"
->
-  බිල්පත් ඉතිහාසය බලන්න
-</button>
+<button id="historyBtn">බිල්පත් ඉතිහාසය</button>
 
-<div id="message"></div>
-
-<div class="export-import-section">
-  <h3>බිල්පත් Export / Import</h3>
-  <button id="exportBtn" type="button" title="Save bills backup to JSON file">Export Bills</button>
-  <input type="file" id="importFile" accept=".json" />
-  <button id="importBtn" type="button" title="Load bills from JSON file">Import Bills</button>
-  <p id="importExportMsg"></p>
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
-  const billForm = document.getElementById('billForm');
-  const billType = document.getElementById('billType');
-  const accountNumber = document.getElementById('accountNumber');
-  const referenceNumber = document.getElementById('referenceNumber');
-  const baseAmount = document.getElementById('baseAmount');
-  const submitBtn = document.getElementById('submitBtn');
-  const messageDiv = document.getElementById('message');
+const billForm = document.getElementById('billForm');
+const billType = document.getElementById('billType');
+const accountNumber = document.getElementById('accountNumber');
+const referenceNumber = document.getElementById('referenceNumber');
+const baseAmount = document.getElementById('baseAmount');
+const submitBtn = document.getElementById('submitBtn');
+const historyBtn = document.getElementById('historyBtn');
 
-  const exportBtn = document.getElementById('exportBtn');
-  const importBtn = document.getElementById('importBtn');
-  const importFile = document.getElementById('importFile');
-  const importExportMsg = document.getElementById('importExportMsg');
+// Auto-focus logic
+billType.addEventListener('change', () => { accountNumber.focus(); });
+accountNumber.addEventListener('keydown', (e) => { if(e.key==='Enter'){ e.preventDefault(); referenceNumber.focus(); }});
+referenceNumber.addEventListener('keydown', (e) => { if(e.key==='Enter'){ e.preventDefault(); baseAmount.focus(); }});
+baseAmount.addEventListener('keydown', (e) => { if(e.key==='Enter'){ e.preventDefault(); submitBtn.click(); }});
 
-  const STORAGE_KEY = 'yomeshBills';
+// History button click
+historyBtn.addEventListener('click', () => {
+  window.location.href = 'billHistory.html';
+});
 
-  function focusNextInput(event, nextElement) {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      nextElement.focus();
+billForm.addEventListener('submit', e => {
+  e.preventDefault();
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'සම්පූර්ණ වෙමින්...';
+
+  const today = new Date();
+  const dateStr = today.toISOString().slice(0, 10);
+  const timeStr = today.toTimeString().slice(0, 8);
+
+  axios({
+    method: "POST",
+    url: "http://91.99.57.32/api/database/rows/table/710/?user_field_names=true",
+    headers: {
+      Authorization: "Token u2FLiMgoADbHyxbKwAoJVvBSJjIKChWU",
+      "Content-Type": "application/json"
+    },
+    data: {
+      bill_type: billType.value,
+      account_number: accountNumber.value.trim(),
+      reference_number: Number(referenceNumber.value.trim()),
+      base_amount: Number(baseAmount.value),
+      date: dateStr,
+      time: timeStr
     }
-  }
-
-  billType.addEventListener('keydown', e => focusNextInput(e, accountNumber));
-  accountNumber.addEventListener('keydown', e => focusNextInput(e, referenceNumber));
-  referenceNumber.addEventListener('keydown', e => focusNextInput(e, baseAmount));
-  baseAmount.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      submitBtn.focus();
-    }
-  });
-
-  billForm.addEventListener('submit', e => {
-    e.preventDefault();
-    messageDiv.textContent = '';
-    messageDiv.style.color = 'black';
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'සම්පූර්ණ වෙමින්...';
-
-    if (!billType.value) {
-      alert('බිල් වර්ගය තෝරන්න!');
-      billType.focus();
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'සම්පූර්ණ කරන්න';
-      return;
-    }
-
-    const accNum = accountNumber.value.trim();
-    const refNum = referenceNumber.value.trim();
-    const base = parseFloat(baseAmount.value);
-
-    if (!accNum || !refNum || isNaN(base) || base <= 0) {
-      alert('සියලු ක්ෂේත්‍ර වල නිවැරදි අගයන් ඇතුළත් කරන්න!');
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'සම්පූර්ණ කරන්න';
-      return;
-    }
-
-    const bills = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    const newBill = {
-      id: Date.now(),
-      billType: billType.value,
-      accountNumber: accNum,
-      referenceNumber: refNum,
-      baseAmount: base,
-      submittedAt: new Date().toISOString(),
-    };
-    bills.push(newBill);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(bills));
-
-    messageDiv.style.color = 'green';
-    messageDiv.textContent = 'බිල්පත සාර්ථකව සුරක්ෂිත කරන ලදි!';
-
-    billForm.reset();
+  })
+  .then(res => {
+    const newId = res.data.id;
+    window.location.href = `bill.html?id=${newId}`;
+  })
+  .catch(err => {
+    alert('දෝෂයක්: ' + (err.response?.data?.error || err.message));
     submitBtn.disabled = false;
     submitBtn.textContent = 'සම්පූර්ණ කරන්න';
-    window.location.href = `bill.html?id=${newBill.id}`;
   });
-
-  exportBtn.addEventListener('click', async () => {
-    const bills = localStorage.getItem(STORAGE_KEY);
-    if (!bills) {
-      alert('සුරක්ෂිත කළ බිල්පත් නොමැත.');
-      return;
-    }
-    const blob = new Blob([bills], { type: 'application/json' });
-    const fileName = `bills_backup_${new Date().toISOString().slice(0, 10)}.json`;
-    const file = new File([blob], fileName, { type: 'application/json' });
-
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({
-          files: [file],
-          title: 'Yomesh Bills Backup',
-          text: 'Yomesh Stores බිල්පත් backup ගොනුව',
-        });
-        alert('ගොනුව share කරන ලදි!');
-      } catch (error) {
-        alert('Share කිරීම අසාර්ථක විය: ' + error.message);
-      }
-    } else {
-      alert('මෙම device එකට share කිරීම සහය දක්වන්නේ නැත.\nඔබට ගොනුව save කර share කරන්න පුළුවන්.');
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-  });
-
-  importBtn.addEventListener('click', () => {
-    importExportMsg.textContent = '';
-    const file = importFile.files[0];
-    if (!file) {
-      alert('Import කිරීම සඳහා JSON ගොනුවක් තෝරන්න.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      try {
-        const importedData = JSON.parse(e.target.result);
-        if (!Array.isArray(importedData)) {
-          throw new Error('ගොනුව අනුමාන කළ ආකෘතියට නොගැළපේ.');
-        }
-        const existingBills = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-        const mergedBills = [...existingBills];
-
-        importedData.forEach(newBill => {
-          if (!existingBills.find(b => b.id === newBill.id)) {
-            mergedBills.push(newBill);
-          }
-        });
-
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedBills));
-        importExportMsg.style.color = 'green';
-        importExportMsg.textContent = `Import සාර්ථකයි! එක් කරන ලද අයිතම: ${importedData.length}`;
-        importFile.value = '';
-      } catch (err) {
-        alert('Import දෝෂයක්: ' + err.message);
-      }
-    };
-    reader.readAsText(file);
-  });
-
-  document.getElementById('historyBtn').addEventListener('click', () => {
-    window.location.href = 'billHistory.html'; 
-  });
+});
 </script>
-
 </body>
 </html>

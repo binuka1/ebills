@@ -7,8 +7,10 @@
 <style>
   body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    max-width: 360px;
-    margin: 0px auto;
+    margin-left: 5px;
+    margin-right: 5px;
+    margin-top: 5px;
+    margin: 0 auto;
     background: #fff;
     color: #000;
     padding: 12px 15px;
@@ -38,16 +40,9 @@
     letter-spacing: 1.5px;
   }
   header .store-info p {
-    margin: 0 0 0;
+    margin: 0;
     font-size: 1rem;
     font-weight: 500;
-  }
-  h2 {
-    text-align: center;
-    margin-bottom: 15px;
-    font-weight: 700;
-    font-size: 1.8rem;
-    letter-spacing: 1.5px;
   }
   .divider {
     border-top: 1px dashed #000;
@@ -69,13 +64,6 @@
     max-width: 45%;
     text-align: right;
     word-wrap: break-word;
-  }
-  .total {
-    font-weight: 700;
-    font-size: 1.4rem;
-    border-top: 1.5px solid #000;
-    padding-top: 8px;
-    margin-top: 14px;
   }
   #dateTime {
     text-align: center;
@@ -109,36 +97,18 @@
 </header>
 
 <div id="billDetails"></div>
-
 <div id="dateTime"></div>
 
-
 <p style="margin-top: 10px; font-size: 1.2rem; color: #3e3e3e; text-align: center; font-weight: 800;">
-  ස්තූති! නැවත පැමිණෙන්න
+  ස්තූති! ඔබේ ගනුදෙනුවට
 </p>
 <hr>
-<!--- <p style="margin-top:20px; font-size:1.1rem; color:#000000; text-align:center;font-weight: 600;"><b>NOTE :-</b>
-  මෙම බිල්පතේ වෙනසක් තියෙනවා නම් එය ලැබී පැය 24ක් ඇතුළත අපව දැනුවත් කරන්න.
-</p> ----->
+<!----<p style="margin-top:20px; font-size:1.1rem; color:#000; text-align:center;font-weight: 600;">
+  <b>NOTE :-</b> මෙම බිල්පතේ වෙනසක් තියෙනවා නම් එය ලැබී පැය 24ක් ඇතුළත අපව දැනුවත් කරන්න.
+</p> --->
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
-  function formatSriLankaDateTime(dateStr) {
-    const d = new Date(dateStr);
-
-    const year = d.getFullYear();
-    const month = (d.getMonth() + 1).toString().padStart(2, '0');
-    const day = d.getDate().toString().padStart(2, '0');
-
-    let hours = d.getHours();
-    const minutes = d.getMinutes();
-
-    const ampm = hours >= 12 ? 'ප.ව' : 'පෙ.ව';
-    hours = hours % 12;
-    if (hours === 0) hours = 12;
-    const minutesStr = minutes < 10 ? '0' + minutes : minutes;
-
-    return `${day}-${month}-${year}__${hours}.${minutesStr} ${ampm}`;
-  }
-
   function getQueryParam(param) {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get(param);
@@ -151,24 +121,33 @@
   if (!billId) {
     billDetailsDiv.innerHTML = '<p style="color:red; text-align:center; font-size:1.2rem;">බිල්පත සොයාගත නොහැකියි. (id නොමැත)</p>';
   } else {
-    const bills = JSON.parse(localStorage.getItem('yomeshBills') || '[]');
-    const bill = bills.find(b => b.id == billId);
+    axios.get(`http://91.99.57.32/api/database/rows/table/710/${billId}/?user_field_names=true`, {
+      headers: { Authorization: "Token u2FLiMgoADbHyxbKwAoJVvBSJjIKChWU" }
+    })
+    .then(res => {
+      const bill = res.data;
 
-    if (!bill) {
-      billDetailsDiv.innerHTML = '<p style="color:red; text-align:center; font-size:1.2rem;">බිල්පත සොයාගත නොහැකියි. (අදාළ id නොගැලපේ)</p>';
-    } else {
+      // Display date and time as stored in DB without conversion
+      let dateTimeStr = (bill.date && bill.time) ? `${bill.date} __ ${bill.time}` : "දත්ත නොමැත";
+
       billDetailsDiv.innerHTML = `
-        <div class="bill-row"><span class="label">බිල් වර්ගය:</span><span class="value">${bill.billType}</span></div>
-        <div class="bill-row"><span class="label">ගිනුම් අංකය:</span><span class="value">${bill.accountNumber}</span></div>
-        <div class="bill-row"><span class="label">යොමු අංකය:</span><br><center><b><p>${bill.referenceNumber}</p><b></center></div>
+        <div class="bill-row"><span class="label">බිල් වර්ගය:</span><span class="value">${bill.bill_type}</span></div>
+        <div class="bill-row"><span class="label">ගිනුම් අංකය:</span><span class="value">${bill.account_number}</span></div>
+        <div class="bill-row"><span class="label">යොමු අංකය:</span><span class="value">${bill.reference_number}</span></div>
         <div class="divider"></div>
-        <div class="bill-row"><span class="label">මුදල (රු.):</span><span class="value">${bill.baseAmount.toFixed(2)}</span></div>
+        <div class="bill-row"><span class="label">මුදල (රු.):</span><span class="value">${Number(bill.base_amount).toFixed(2)}</span></div>
       `;
-      dateTimeDiv.textContent = formatSriLankaDateTime(bill.submittedAt);
-    }
+
+      dateTimeDiv.textContent = dateTimeStr;
+
+    })
+    .catch(err => {
+      console.error(err);
+      billDetailsDiv.innerHTML = '<p style="color:red; text-align:center; font-size:1.2rem;">Baserow DB එකෙන් බිල්පත ලබාගැනීමට නොහැක.</p>';
+      dateTimeDiv.textContent = "";
+    });
   }
 </script>
 
 </body>
 </html>
-
