@@ -98,10 +98,8 @@ const baseAmount = document.getElementById('baseAmount');
 const submitBtn = document.getElementById('submitBtn');
 const historyBtn = document.getElementById('historyBtn');
 
-// API URL + Proxy
-const API_URL = "http://91.99.57.32/api/database/rows/table/710/?user_field_names=true";
-// free proxy for CORS bypass
-const PROXY = "https://cors-anywhere.herokuapp.com/"; 
+// API URL (local proxy)
+const API_URL = "http://localhost:3000/api/database/rows/table/710/?user_field_names=true";
 
 // Auto-focus logic
 billType.addEventListener('change', () => { accountNumber.focus(); });
@@ -126,7 +124,7 @@ billForm.addEventListener('submit', e => {
 
   axios({
     method: "POST",
-    url: PROXY + API_URL,   // proxy එකෙන් යවමු
+    url: API_URL,
     headers: {
       Authorization: "Token u2FLiMgoADbHyxbKwAoJVvBSJjIKChWU",
       "Content-Type": "application/json"
