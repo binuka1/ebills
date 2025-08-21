@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>මසික වාර්තාව හා ග්‍රැෆ් - Yomesh Stores</title>
+<style>
+  body {
+    font-family: Arial,sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f0f8ff;
+  }
+  .container {
+    max-width: 900px;
+    margin: auto;
+    padding: 20px;
+  }
+  h2 {
+    text-align: center;
+    color: #004a99;
+    margin-bottom: 20px;
+  }
+  label, select {
+    display: block;
+    margin-bottom: 12px;
+    font-weight: bold;
+  }
+  select {
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1.5px solid #aaa;
+    font-size: 1rem;
+    width: 200px;
+  }
+  .report-box {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    margin-bottom: 20px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+  th, td {
+    border: 1px solid #004a99;
+    padding: 10px;
+    text-align: center;
+  }
+  th {
+    background-color: #004a99;
+    color: white;
+  }
+  tr:nth-child(even) {
+    background-color: #dde6f7;
+  }
+  canvas {
+    margin-top: 15px;
+    background: white;
+    border-radius: 10px;
+    padding: 10px;
+  }
+  @media (max-width: 480px) {
+    .container { padding: 10px; }
+    select { width: 100%; margin-bottom: 10px; }
+    th, td { font-size: 0.8rem; padding: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>මසික වාර්තාව හා ග්‍රැෆ්</h2>
+
+  <label for="monthSelect">මස තෝරන්න</label>
+  <select id="monthSelect">
+    <option value="">-- මස තෝරන්න --</option>
+    <option value="01">ජනවාරි</option>
+    <option value="02">පෙබරවාරි</option>
+    <option value="03">මාර්තු</option>
+    <option value="04">අප්‍රේල්</option>
+    <option value="05">මැයි</option>
+    <option value="06">ජූනි</option>
+    <option value="07">ජූලි</option>
+    <option value="08">අගෝස්තු</option>
+    <option value="09">සැප්තැම්බර්</option>
+    <option value="10">ඔක්තෝබර්</option>
+    <option value="11">නොවැම්බර්</option>
+    <option value="12">දෙසැම්බර්</option>
+  </select>
+
+  <label for="yearSelect">වසර තෝරන්න</label>
+  <select id="yearSelect">
+    <option value="">-- වසර තෝරන්න --</option>
+    <option value="2023">2023</option>
+    <option value="2024">2024</option>
+    <option value="2025">2025</option>
+  </select>
+
+  <div class="report-box" id="summaryBox">
+    <h3>සාරාංශය</h3>
+    <p>මසට අදාළ බිල් ගණන: <span id="totalBills">0</span></p>
+    <p>මසට අදාළ මුළු ගාණ (රු.): <span id="totalAmount">0.00</span></p>
+  </div>
+
+  <div class="report-box">
+    <h3>බිල් වර්ග අනුව</h3>
+    <table id="billTypeTable">
+      <thead>
+        <tr>
+          <th>බිල් වර්ගය</th>
+          <th>බිල් ගණන</th>
+          <th>මුළු ගාණ (රු.)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="3">දත්ත නොමැත.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="report-box">
+    <h3>ග්‍රැෆ් (මාසික / වාර්ෂික)</h3>
+    <canvas id="monthlyChart" height="200"></canvas>
+    <canvas id="yearlyChart" height="200"></canvas>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const monthSelect = document.getElementById('monthSelect');
+  const yearSelect = document.getElementById('yearSelect');
+  const totalBillsSpan = document.getElementById('totalBills');
+  const totalAmountSpan = document.getElementById('totalAmount');
+  const billTypeTableBody = document.querySelector('#billTypeTable tbody');
+
+  let allBills = [];
+
+  function loadBillsFromDB() {
+    axios.get('http://91.99.57.32/api/database/rows/table/710/?user_field_names=true', {
+      headers: { Authorization: "Token u2FLiMgoADbHyxbKwAoJVvBSJjIKChWU" }
+    })
+    .then(res => {
+      allBills = res.data.results || [];
+      renderReport();
+    })
+    .catch(err => {
+      console.error('Baserow DB error:', err);
+    });
+  }
+
+  function renderReport() {
+    const month = monthSelect.value;
+    const year = yearSelect.value;
+    if (!month || !year) return;
+
+    const filtered = allBills.filter(b => {
+      if (!b.date) return false;
+      const [y, m] = b.date.split("-");
+      return y === year && m === month;
+    });
+
+    // Total Bills & Amount
+    const totalBills = filtered.length;
+    const totalAmount = filtered.reduce((sum, b) => sum + (Number(b.base_amount) || 0), 0);
+    totalBillsSpan.textContent = totalBills;
+    totalAmountSpan.textContent = totalAmount.toFixed(2);
+
+    // Bill types summary
+    const typeMap = {};
+    filtered.forEach(b => {
+      const type = b.bill_type || 'නොහැඳින්වූ';
+      if (!typeMap[type]) typeMap[type] = {count:0, total:0};
+      typeMap[type].count += 1;
+      typeMap[type].total += Number(b.base_amount) || 0;
+    });
+
+    billTypeTableBody.innerHTML = '';
+    const types = Object.keys(typeMap);
+    if (types.length === 0) {
+      billTypeTableBody.innerHTML = '<tr><td colspan="3">දත්ත නොමැත.</td></tr>';
+    } else {
+      types.forEach(type => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${type}</td><td>${typeMap[type].count}</td><td>${typeMap[type].total.toFixed(2)}</td>`;
+        billTypeTableBody.appendChild(tr);
+      });
+    }
+
+    renderCharts(year);
+  }
+
+  let monthlyChartInstance, yearlyChartInstance;
+
+  function renderCharts(selectedYear) {
+    const months = ["ජන","පෙබ","මාර්තු","අප්‍රේල්","මැයි","ජූනි","ජූලි","අගෝ","සැප්","ඔක්","නොවැ","දෙස"];
+    const monthlyAmounts = Array(12).fill(0);
+
+    // calculate monthly totals for selected year
+    allBills.forEach(b => {
+      if (!b.date) return;
+      const [y, m] = b.date.split("-");
+      if (y === selectedYear) monthlyAmounts[Number(m)-1] += Number(b.base_amount)||0;
+    });
+
+    const ctx1 = document.getElementById('monthlyChart').getContext('2d');
+    if (monthlyChartInstance) monthlyChartInstance.destroy();
+    monthlyChartInstance = new Chart(ctx1, {
+      type: 'line',
+      data: {
+        labels: months,
+        datasets: [{ label: 'මසික ගාණ (රු.)', data: monthlyAmounts, borderColor: '#007bff', backgroundColor: 'rgba(0,123,255,0.2)', fill: true }]
+      },
+      options: { responsive: true, plugins: { legend: { position: 'top' } } }
+    });
+
+    // Yearly chart (summing each year)
+    const yearSet = [...new Set(allBills.map(b=>b.date?b.date.split("-")[0]:""))].sort();
+    const yearlyAmounts = yearSet.map(y => {
+      return allBills.filter(b=>b.date&&b.date.startsWith(y)).reduce((sum,b)=>sum+(Number(b.base_amount)||0),0);
+    });
+    const ctx2 = document.getElementById('yearlyChart').getContext('2d');
+    if (yearlyChartInstance) yearlyChartInstance.destroy();
+    yearlyChartInstance = new Chart(ctx2, {
+      type: 'line',
+      data: {
+        labels: yearSet,
+        datasets: [{ label: 'වාර්ෂික ගාණ (රු.)', data: yearlyAmounts, borderColor: '#28a745', backgroundColor: 'rgba(40,167,69,0.2)', fill: true }]
+      },
+      options: { responsive: true, plugins: { legend: { position: 'top' } } }
+    });
+  }
+
+  monthSelect.addEventListener('change', renderReport);
+  yearSelect.addEventListener('change', renderReport);
+
+  loadBillsFromDB();
+</script>
+
+</body>
+</html>

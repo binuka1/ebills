@@ -62,7 +62,8 @@
 </style>
 </head>
 <body>
-
+<button id="historyBtn">බිල්පත් ඉතිහාසය</button>
+<button id="reportBtn">Report</button>
 <h1>Yomesh Stores - නව බිල්පතක් ඇතුළත් කරන්න</h1>
 
 <form id="billForm" novalidate>
@@ -83,10 +84,13 @@
   <label for="baseAmount">ගාණ (රු.)</label>
   <input type="number" id="baseAmount" min="0" step="0.01" required placeholder="ගාණ ඇතුළත් කරන්න" />
 
+  <label for="phoneNumber">දුරකථන අංකය</label>
+  <input type="text" id="phoneNumber" inputmode="tel" pattern="[0-9]*" required placeholder="දුරකථන අංකය ඇතුළත් කරන්න" />
+
   <button type="submit" id="submitBtn">සම්පූර්ණ කරන්න</button>
 </form>
 
-<button id="historyBtn">බිල්පත් ඉතිහාසය</button>
+
 
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
@@ -95,6 +99,7 @@ const billType = document.getElementById('billType');
 const accountNumber = document.getElementById('accountNumber');
 const referenceNumber = document.getElementById('referenceNumber');
 const baseAmount = document.getElementById('baseAmount');
+const phoneNumber = document.getElementById('phoneNumber');
 const submitBtn = document.getElementById('submitBtn');
 const historyBtn = document.getElementById('historyBtn');
 
@@ -102,11 +107,16 @@ const historyBtn = document.getElementById('historyBtn');
 billType.addEventListener('change', () => { accountNumber.focus(); });
 accountNumber.addEventListener('keydown', (e) => { if(e.key==='Enter'){ e.preventDefault(); referenceNumber.focus(); }});
 referenceNumber.addEventListener('keydown', (e) => { if(e.key==='Enter'){ e.preventDefault(); baseAmount.focus(); }});
-baseAmount.addEventListener('keydown', (e) => { if(e.key==='Enter'){ e.preventDefault(); submitBtn.click(); }});
+baseAmount.addEventListener('keydown', (e) => { if(e.key==='Enter'){ e.preventDefault(); phoneNumber.focus(); }});
+phoneNumber.addEventListener('keydown', (e) => { if(e.key==='Enter'){ e.preventDefault(); submitBtn.click(); }});
 
 // History button click
 historyBtn.addEventListener('click', () => {
   window.location.href = 'billHistory.html';
+});
+
+reportBtn.addEventListener('click', () => {
+  window.location.href = 'report.html';
 });
 
 billForm.addEventListener('submit', e => {
@@ -131,7 +141,8 @@ billForm.addEventListener('submit', e => {
       reference_number: Number(referenceNumber.value.trim()),
       base_amount: Number(baseAmount.value),
       date: dateStr,
-      time: timeStr
+      time: timeStr,
+      "Phone number": phoneNumber.value.trim() // ✅ phone number save
     }
   })
   .then(res => {
@@ -145,5 +156,6 @@ billForm.addEventListener('submit', e => {
   });
 });
 </script>
+
 </body>
 </html>
