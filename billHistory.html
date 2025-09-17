@@ -100,20 +100,19 @@ function renderMonthTags(){
       selectedMonth = i+1;
       document.querySelectorAll('.month-tag').forEach(t=>t.classList.remove('active'));
       tag.classList.add('active');
-      tag.scrollIntoView({behavior:"smooth", inline:"center"}); // auto scroll
-      renderBills(allBills); // client-side filter
+      tag.scrollIntoView({behavior:"smooth", inline:"center"}); 
+      renderBills(allBills); 
     });
     monthsContainer.appendChild(tag);
   });
 
-  // Initial auto scroll for default selected month
   const activeTag = document.querySelector('.month-tag.active');
   if(activeTag){
     activeTag.scrollIntoView({behavior:"smooth", inline:"center"});
   }
 }
 
-// Render bills in table with client-side filtering
+// Render bills
 function renderBills(bills){
   billsTableBody.innerHTML='';
   if(!bills || bills.length===0){
@@ -143,32 +142,39 @@ function renderBills(bills){
       <td>${b.date||''}</td>
       <td><button class="detailsBtn">විස්තර</button></td>
     `;
-    tr.querySelector('.detailsBtn').addEventListener('click',()=>{ window.location.href=`bill.html?id=${b.id}`; });
+    tr.querySelector('.detailsBtn').addEventListener('click',()=>{ 
+      window.location.href=`bill.html?id=${b.id}`; 
+    });
     billsTableBody.appendChild(tr);
   });
 }
 
-// Load all bills from Baserow with pagination (unlimited rows)
+// Load bills via proxy
 async function loadAllBills(){
   try{
     let all=[];
-    let url = 'http://91.99.57.32/api/database/rows/table/710/?user_field_names=true&limit=200';
-    while(url){
-      const res = await axios.get(url,{
-        headers:{ Authorization:"Token u2FLiMgoADbHyxbKwAoJVvBSJjIKChWU" }
-      });
+    let next = "limit=200"; 
+    while(next){
+      const res = await axios.get(
+        `https://your-vercel-app.vercel.app/api/proxy?url=${encodeURIComponent(next)}`
+      );
       all = all.concat(res.data.results||[]);
-      url = res.data.next;
+      if(res.data.next){
+        const query = res.data.next.split("?")[1];
+        next = query;
+      } else {
+        next = null;
+      }
     }
     allBills = all;
     renderBills(allBills);
   }catch(err){
-    console.error("Baserow DB error:", err);
+    console.error("Proxy error:", err);
     billsTableBody.innerHTML='<tr><td colspan="7">DB load නොවේ.</td></tr>';
   }
 }
 
-// Event listeners
+// Events
 backBtn.addEventListener('click',()=>window.location.href='index.html');
 searchInput.addEventListener('input', ()=>{
   const term = searchInput.value.toLowerCase();
@@ -183,7 +189,7 @@ yearSelect.addEventListener('change', ()=>{
   renderBills(allBills);
 });
 
-// Initialize
+// Init
 renderYearOptions();
 renderMonthTags();
 loadAllBills();
